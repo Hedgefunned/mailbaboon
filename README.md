@@ -13,9 +13,9 @@ Axios
 
 ## Configuration
 
-Edit `.env` in the project root to change the port or database credentials before running `./setup.sh` or `docker compose up`.
+Edit `.env` in the project root to change the port, database credentials or user:group ids before running `./setup.sh` or `docker compose up`.
 The app container reads `DB_*` variables from this file, overriding Laravel's own `.env`.
-The container entrypoint (`docker/php/entrypoint.sh`) handles Composer install, app key generation, and storage permissions automatically on first boot.
+The container entrypoint (`docker/php/entrypoint.sh`) handles Composer install and app key generation on first boot.
 
 ## Quick Start (automated)
 
@@ -40,50 +40,50 @@ If you prefer to run each step yourself:
 
 1. **Create the environment file**
 
-   ```sh
-   cp .env.example .env
-   ```
+    ```sh
+    cp .env.example .env
+    ```
 
-   Edit `.env` to change the port (`APP_PORT`) or database credentials if needed.
+    Edit `.env` to change the port (`APP_PORT`) or database credentials if needed.
 
 2. **Build and start containers**
 
-   ```sh
-   docker compose up -d --build
-   ```
+    ```sh
+    docker compose up -d --build
+    ```
 
-   The container entrypoint automatically runs `composer install` and generates the Laravel app key on first boot.
+    The container entrypoint automatically runs `composer install` and generates the Laravel app key on first boot.
 
 3. **Wait for the database**
 
-   MariaDB has a health check configured. Wait until it reports healthy:
+    MariaDB has a health check configured. Wait until it reports healthy:
 
-   ```sh
-   docker compose exec db healthcheck.sh --connect --innodb_initialized
-   ```
+    ```sh
+    docker compose exec db healthcheck.sh --connect --innodb_initialized
+    ```
 
 4. **Install JS dependencies and build the frontend**
 
-   ```sh
-   docker compose exec app npm install
-   docker compose exec app npm run build
-   ```
+    ```sh
+    docker compose exec app npm install
+    docker compose exec app npm run build
+    ```
 
 5. **Run migrations**
 
-   ```sh
-   docker compose exec app php artisan migrate
-   ```
+    ```sh
+    docker compose exec app php artisan migrate
+    ```
 
 6. **Seed the database (optional)**
 
-   ```sh
-   docker compose exec app php artisan db:seed
-   ```
+    ```sh
+    docker compose exec app php artisan db:seed
+    ```
 
 7. **Open the app**
 
-   Visit [http://localhost:8080](http://localhost:8080) (or the port you set in `APP_PORT`).
+    Visit [http://localhost:8080](http://localhost:8080) (or the port you set in `APP_PORT`).
 
 ## Common Commands
 
