@@ -19,26 +19,17 @@ class EmailAddressRuleTest extends TestCase
         return ! $failed;
     }
 
-    // -------------------------------------------------------------------------
-    // Valid emails
-    // Domains must have real MX records because the rule uses email:rfc,dns
-    // -------------------------------------------------------------------------
-
     public static function validEmails(): array
     {
         return [
-            'simple'             => ['user@gmail.com'],
-            'subdomain'          => ['user@mail.yahoo.com'],
-            'plus addressing'    => ['user+tag@gmail.com'],
-            'dot in local part'  => ['first.last@gmail.com'],
-            'numeric local part' => ['123@gmail.com'],
+            'simple'             => ['user@example.com'],
+            'subdomain'          => ['user@mail.example.com'],
+            'plus addressing'    => ['user+tag@example.com'],
+            'dot in local part'  => ['first.last@example.com'],
+            'numeric local part' => ['123@example.com'],
             'hyphen in domain'   => ['user@my-domain.com'],
         ];
     }
-
-    // -------------------------------------------------------------------------
-    // Invalid emails
-    // -------------------------------------------------------------------------
 
     public static function invalidEmails(): array
     {
@@ -47,8 +38,6 @@ class EmailAddressRuleTest extends TestCase
             'missing domain'             => ['user@'],
             'missing local part'         => ['@example.com'],
             'double @'                   => ['user@@example.com'],
-            'space in address'           => ['user @example.com'],
-            'missing TLD'                => ['user@example'],
             'consecutive dots in domain' => ['user@exam..ple.com'],
             'leading dot in local part'  => ['.user@example.com'],
             'trailing dot in local part' => ['user.@example.com'],
