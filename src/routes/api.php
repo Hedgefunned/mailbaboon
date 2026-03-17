@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ContactController;
 use Illuminate\Support\Facades\Route;
 
-Route::apiResource('api_route', Controller::class)->only(['index', 'store', 'update']);
+Route::apiResource('contacts', ContactController::class)->except(['show', 'create', 'edit']);
