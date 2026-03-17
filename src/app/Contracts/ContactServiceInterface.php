@@ -3,11 +3,11 @@
 namespace App\Contracts;
 
 use App\Models\Contact;
-use Illuminate\Support\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface ContactServiceInterface
 {
-    public function list(array $filters): Collection;
+    public function list(array $filters): LengthAwarePaginator;
 
     public function create(array $data): Contact;
 

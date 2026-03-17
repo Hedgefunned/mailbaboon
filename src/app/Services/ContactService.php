@@ -4,13 +4,26 @@ namespace App\Services;
 
 use App\Contracts\ContactServiceInterface;
 use App\Models\Contact;
-use Illuminate\Support\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ContactService implements ContactServiceInterface
 {
-    public function list(array $filters): Collection
+    private const PER_PAGE = 25;
+
+    public function list(array $filters): LengthAwarePaginator
     {
-        return Contact::orderBy('last_name')->orderBy('first_name')->get();
+        $query = Contact::orderBy('last_name')->orderBy('first_name');
+
+        if ($search = trim($filters['search'] ?? '')) {
+            $terms = collect(preg_split('/\s+/', $search))
+                ->filter()
+                ->map(fn ($word) => $word . '*')
+                ->implode(' ');
+
+            $query->whereFullText(['first_name', 'last_name', 'email'], $terms, ['mode' => 'boolean']);
+        }
+
+        return $query->paginate(self::PER_PAGE);
     }
 
     public function create(array $data): Contact

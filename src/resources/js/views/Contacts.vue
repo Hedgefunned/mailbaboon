@@ -10,6 +10,15 @@
             </button>
         </div>
 
+        <div class="mb-4">
+            <input
+                v-model="search"
+                type="search"
+                placeholder="Search by name or email…"
+                class="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+        </div>
+
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <div v-if="loading" class="p-8 text-center text-gray-400">Loading...</div>
 
@@ -50,6 +59,27 @@
             </table>
         </div>
 
+        <div v-if="lastPage > 1" class="flex items-center justify-between mt-4 text-sm text-gray-500">
+            <span>{{ from }}–{{ to }} of {{ total }}</span>
+            <div class="flex items-center gap-1">
+                <button
+                    @click="goToPage(currentPage - 1)"
+                    :disabled="currentPage === 1"
+                    class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    ‹ Prev
+                </button>
+                <span class="px-3 py-1.5">{{ currentPage }} / {{ lastPage }}</span>
+                <button
+                    @click="goToPage(currentPage + 1)"
+                    :disabled="currentPage === lastPage"
+                    class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    Next ›
+                </button>
+            </div>
+        </div>
+
         <ContactModal
             v-if="showModal"
             :contact="editingContact"
@@ -60,7 +90,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 import axios from "axios";
 import ContactModal from "../components/ContactModal.vue";
 
@@ -69,14 +99,43 @@ const loading = ref(false);
 const showModal = ref(false);
 const editingContact = ref(null);
 
+const search = ref("");
+const currentPage = ref(1);
+const lastPage = ref(1);
+const total = ref(0);
+const from = ref(0);
+const to = ref(0);
+
+let debounceTimer = null;
+
 async function loadContacts() {
     loading.value = true;
     try {
-        const { data } = await axios.get("/api/contacts");
-        contacts.value = data;
+        const { data } = await axios.get("/api/contacts", {
+            params: { search: search.value || undefined, page: currentPage.value },
+        });
+        contacts.value = data.data;
+        currentPage.value = data.current_page;
+        lastPage.value = data.last_page;
+        total.value = data.total;
+        from.value = data.from ?? 0;
+        to.value = data.to ?? 0;
     } finally {
         loading.value = false;
     }
+}
+
+watch(search, () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        currentPage.value = 1;
+        loadContacts();
+    }, 300);
+});
+
+function goToPage(page) {
+    currentPage.value = page;
+    loadContacts();
 }
 
 function openModal(contact) {

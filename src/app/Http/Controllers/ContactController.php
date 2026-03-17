@@ -15,7 +15,7 @@ class ContactController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $contacts = $this->service->list($request->only('status'));
+        $contacts = $this->service->list($request->only(['search']));
 
         return response()->json($contacts);
     }
