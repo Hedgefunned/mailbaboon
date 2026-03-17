@@ -14,7 +14,7 @@ class EmailAddress implements ValidationRule
      * Currently it only checks if the email address is in a valid using Laravel's built-in RFC validation rule.
      * This can be extended in the future to include additional checks, such as verifying the domain or checking for disposable email addresses.
      *
-     * @param  Closure(string, ?string=): PotentiallyTranslatedString  
+     * @param  Closure(string, ?string=): PotentiallyTranslatedString
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {

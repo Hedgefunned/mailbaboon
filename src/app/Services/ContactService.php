@@ -17,7 +17,7 @@ class ContactService implements ContactServiceInterface
         if ($search = trim($filters['search'] ?? '')) {
             $terms = collect(preg_split('/\s+/', $search))
                 ->filter()
-                ->map(fn ($word) => $word . '*')
+                ->map(fn ($word) => $word.'*')
                 ->implode(' ');
 
             $query->whereFullText(['first_name', 'last_name', 'email'], $terms, ['mode' => 'boolean']);
