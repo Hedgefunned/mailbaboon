@@ -18,4 +18,19 @@ class ImportController extends Controller
 
         return response()->json($result);
     }
+
+    public function rejected(Request $request, ImportServiceInterface $service): JsonResponse
+    {
+        $rejected = $service->listRejected($request->only(['search']));
+
+        return response()->json($rejected);
+    }
+
+    public function truncateContacts(ImportServiceInterface $service): JsonResponse
+    {
+        $service->truncateContacts();
+
+        return response()->json(['message' => 'Contacts table truncated.']);
+    }
+
 }

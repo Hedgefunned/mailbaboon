@@ -46,6 +46,7 @@ services:
 
     db:
         image: mariadb:11
+        command: --local-infile=1
         restart: unless-stopped
         environment:
             MYSQL_DATABASE: ${DB_DATABASE}

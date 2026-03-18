@@ -14,7 +14,9 @@ class ContactService implements ContactServiceInterface
     {
         $query = Contact::orderBy('last_name')->orderBy('first_name');
 
-        if ($search = trim($filters['search'] ?? '')) {
+        $search = trim($filters['search'] ?? '');
+        if ($search !== '') {
+            $search = preg_replace('/[^\p{L}\p{N}_]+/u', ' ', $search);
             $terms = collect(preg_split('/\s+/', $search))
                 ->filter()
                 ->map(fn ($word) => $word.'*')
