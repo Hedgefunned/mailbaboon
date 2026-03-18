@@ -27,15 +27,24 @@ class ImportService implements ImportServiceInterface
         private InsertValidContactsAction $insertValidContacts,
     ) {}
 
-    public function import(UploadedFile $file): array
+    public function import(UploadedFile $file, ?callable $onProgress = null): array
     {
         $startTime = hrtime(true);
 
         $parseResult = $this->parseXmlToCsv->handle($file);
+        $onProgress && $onProgress('parse', 20, 'XML parsed');
+
         $loadResult = $this->loadCsvIntoStaging->handle($parseResult['csv_path']);
+        $onProgress && $onProgress('load', 40, 'Loaded into staging');
+
         $inputDedupeResult = $this->deduplicateInput->handle();
+        $onProgress && $onProgress('dedupe_input', 60, 'Deduplicated within file');
+
         $dbDedupeResult = $this->deduplicateExistingContacts->handle();
+        $onProgress && $onProgress('dedupe_db', 80, 'Checked against database');
+
         $insertResult = $this->insertValidContacts->handle();
+        $onProgress && $onProgress('insert', 100, 'Contacts inserted');
         $importResult = $this->prepareImportResult();
 
         $performanceMetrics = [

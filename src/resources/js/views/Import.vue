@@ -11,6 +11,9 @@
                 :error="error"
                 :file="file"
                 :loading="loading"
+                :progress="progress"
+                :progress-steps="progressSteps"
+                :show-progress="showProgress"
                 @file-change="onFileChange"
                 @truncate-contacts="truncateContacts"
                 @upload="upload"
@@ -86,6 +89,17 @@ const error = ref(null);
 const debugLoading = ref(false);
 const debugMessage = ref(null);
 
+const showProgress = ref(false);
+const progress = ref(null);
+const STEPS = [
+    { key: "parse", label: "XML parsed" },
+    { key: "load", label: "Loaded into staging" },
+    { key: "dedupe_input", label: "Deduplicated within file" },
+    { key: "dedupe_db", label: "Checked against database" },
+    { key: "insert", label: "Contacts inserted" },
+];
+const progressSteps = ref(STEPS.map((s) => ({ ...s, done: false })));
+
 const rejectedRecords = ref([]);
 const rejectedLoading = ref(false);
 const rejectedSearch = ref("");
@@ -102,6 +116,9 @@ function onFileChange(e) {
     result.value = null;
     error.value = null;
     debugMessage.value = null;
+    showProgress.value = false;
+    progress.value = null;
+    progressSteps.value = STEPS.map((s) => ({ ...s, done: false }));
 }
 
 async function upload() {
@@ -114,14 +131,56 @@ async function upload() {
     result.value = null;
     error.value = null;
     debugMessage.value = null;
+    showProgress.value = true;
+    progress.value = 0;
+    progressSteps.value = STEPS.map((s) => ({ ...s, done: false }));
 
     try {
-        const { data } = await axios.post("/api/import", form);
-        result.value = data;
+        const response = await fetch("/api/import/stream", {
+            method: "POST",
+            body: form,
+            headers: { Accept: "application/x-ndjson" },
+        });
+
+        if (!response.ok) {
+            const json = await response.json().catch(() => ({}));
+            throw new Error(json.message ?? "Import failed.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop(); // keep the last incomplete line
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+
+                const event = JSON.parse(trimmed);
+
+                if (event.type === "progress") {
+                    progress.value = event.percent;
+                    progressSteps.value = progressSteps.value.map((s) => ({
+                        ...s,
+                        done: s.done || s.key === event.step,
+                    }));
+                } else if (event.type === "result") {
+                    result.value = event.data;
+                }
+            }
+        }
+
         rejectedCurrentPage.value = 1;
         await loadRejectedRecords();
     } catch (e) {
-        error.value = e.response?.data?.message ?? "Import failed.";
+        error.value = e.message ?? "Import failed.";
     } finally {
         loading.value = false;
     }

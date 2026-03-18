@@ -11,7 +11,7 @@
                 {{ result.load_time_ms }} ms
             </p>
             <p>
-                <span class="font-medium">Input Dedupe:</span>
+                <span class="font-medium">File Dedupe:</span>
                 {{ result.dedupe_time_ms }} ms
             </p>
             <p>

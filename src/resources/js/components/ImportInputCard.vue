@@ -1,5 +1,5 @@
 <template>
-    <div class="bg-white rounded-xl shadow-sm p-6">
+    <div class="bg-white rounded-xl shadow-sm p-6 flex flex-col">
         <div class="flex items-start justify-between gap-4 mb-4">
             <label class="block text-sm font-medium text-gray-700">
                 XML file
@@ -18,34 +18,92 @@
             </button>
         </div>
 
-        <input
-            type="file"
-            accept=".xml"
-            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            @change="$emit('file-change', $event)"
-        />
+        <!-- Progress UI (shown while importing and after completion) -->
+        <div v-if="showProgress && progress !== null" class="mb-4">
+            <div>
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>{{
+                        loading ? "Importing…" : "Import complete"
+                    }}</span>
+                    <span>{{ progress }}%</span>
+                </div>
+                <div
+                    class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden"
+                >
+                    <div
+                        class="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+                        :style="{ width: progress + '%' }"
+                    />
+                </div>
+            </div>
 
-        <div
-            v-if="debugMessage"
-            class="mt-4 p-3 rounded-lg bg-amber-50 text-sm text-amber-800"
-        >
-            {{ debugMessage }}
+            <ul class="space-y-1.5 mt-4">
+                <li
+                    v-for="step in progressSteps"
+                    :key="step.key"
+                    class="flex items-center gap-2 text-sm"
+                    :class="step.done ? 'text-gray-700' : 'text-gray-400'"
+                >
+                    <span
+                        class="inline-flex items-center justify-center w-4 h-4 rounded-full text-xs flex-shrink-0"
+                        :class="
+                            step.done
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-200 text-gray-400'
+                        "
+                    >
+                        <svg
+                            v-if="step.done"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            class="w-2.5 h-2.5"
+                        >
+                            <path
+                                d="M2 6l3 3 5-5"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+                    </span>
+                    {{ step.label }}
+                </li>
+            </ul>
         </div>
 
-        <div
-            v-if="error"
-            class="mt-4 p-3 rounded-lg bg-red-50 text-sm text-red-700"
-        >
-            {{ error }}
-        </div>
+        <!-- File input (shown when not loading) -->
+        <div v-if="!loading">
+            <input
+                type="file"
+                accept=".xml"
+                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                @change="$emit('file-change', $event)"
+            />
 
-        <button
-            :disabled="!file || loading"
-            class="cursor-pointer mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            @click="$emit('upload')"
-        >
-            {{ loading ? "Importing…" : "Import" }}
-        </button>
+            <div
+                v-if="debugMessage"
+                class="mt-4 p-3 rounded-lg bg-amber-50 text-sm text-amber-800"
+            >
+                {{ debugMessage }}
+            </div>
+
+            <div
+                v-if="error"
+                class="mt-4 p-3 rounded-lg bg-red-50 text-sm text-red-700"
+            >
+                {{ error }}
+            </div>
+
+            <button
+                :disabled="!file"
+                class="cursor-pointer mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                @click="$emit('upload')"
+            >
+                Import
+            </button>
+        </div>
     </div>
 </template>
 
@@ -68,6 +126,18 @@ defineProps({
         default: null,
     },
     loading: {
+        type: Boolean,
+        default: false,
+    },
+    progress: {
+        type: Number,
+        default: null,
+    },
+    progressSteps: {
+        type: Array,
+        default: () => [],
+    },
+    showProgress: {
         type: Boolean,
         default: false,
     },

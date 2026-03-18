@@ -7,7 +7,7 @@ use Illuminate\Http\UploadedFile;
 
 interface ImportServiceInterface
 {
-    public function import(UploadedFile $file): array;
+    public function import(UploadedFile $file, ?callable $onProgress = null): array;
 
     public function listRejected(array $filters): LengthAwarePaginator;
 

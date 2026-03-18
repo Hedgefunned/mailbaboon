@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Contracts\ImportServiceInterface;
 use App\Models\Contact;
 use App\Rules\EmailAddress;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -16,7 +18,11 @@ use Illuminate\Support\Facades\Log;
  */
 class BaboonImportService implements ImportServiceInterface
 {
-    public function import(UploadedFile $file): array
+    private const PER_PAGE = 25;
+
+    private const STAGING_TABLE = 'contact_imports';
+
+    public function import(UploadedFile $file, ?callable $onProgress = null): array
     {
         $startTime = hrtime(true);
 
@@ -76,5 +82,32 @@ class BaboonImportService implements ImportServiceInterface
         });
 
         return ! $failed;
+    }
+
+    public function truncateContacts(): void
+    {
+        DB::table('contacts')->truncate();
+    }
+
+    public function listRejected(array $filters): LengthAwarePaginator
+    {
+        $query = DB::table(self::STAGING_TABLE)
+            ->select(['id', 'first_name', 'last_name', 'email', 'failure_reason'])
+            ->where('is_valid', 0)
+            ->orderByDesc('id');
+
+        $search = trim($filters['search'] ?? '');
+        if ($search !== '') {
+            $query->where(function ($subQuery) use ($search) {
+                $like = '%'.$search.'%';
+                $subQuery
+                    ->where('first_name', 'like', $like)
+                    ->orWhere('last_name', 'like', $like)
+                    ->orWhere('email', 'like', $like)
+                    ->orWhere('failure_reason', 'like', $like);
+            });
+        }
+
+        return $query->paginate(self::PER_PAGE);
     }
 }
