@@ -10,75 +10,51 @@
             </button>
         </div>
 
-        <div class="mb-4">
-            <input
-                v-model="search"
-                type="search"
-                placeholder="Search by name or email…"
-                class="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-        </div>
+        <PaginatedTable
+            :current-page="currentPage"
+            :empty-message="'No contacts found.'"
+            :from="from"
+            :items="contacts"
+            :last-page="lastPage"
+            :loading="loading"
+            :search="search"
+            :search-placeholder="'Search by name or email…'"
+            :to="to"
+            :total="total"
+            @page-change="goToPage"
+            @update:search="search = $event"
+        >
+            <template #header>
+                <th class="text-left px-5 py-3 font-medium text-gray-500">
+                    Name
+                </th>
+                <th class="text-left px-5 py-3 font-medium text-gray-500">
+                    Email
+                </th>
+                <th class="px-5 py-3"></th>
+            </template>
 
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div v-if="loading" class="p-8 text-center text-gray-400">Loading...</div>
-
-            <div v-else-if="contacts.length === 0" class="p-8 text-center text-gray-400">
-                No contacts found.
-            </div>
-
-            <table v-else class="w-full text-sm">
-                <thead class="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                        <th class="text-left px-5 py-3 font-medium text-gray-500">Name</th>
-                        <th class="text-left px-5 py-3 font-medium text-gray-500">Email</th>
-                        <th class="px-5 py-3"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    <tr v-for="contact in contacts" :key="contact.id" class="hover:bg-gray-50">
-                        <td class="px-5 py-3 font-medium text-gray-800">
-                            {{ contact.first_name }} {{ contact.last_name }}
-                        </td>
-                        <td class="px-5 py-3 text-gray-600">{{ contact.email }}</td>
-                        <td class="px-5 py-3 text-right space-x-2">
-                            <button
-                                @click="openModal(contact)"
-                                class="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                            >
-                                Edit
-                            </button>
-                            <button
-                                @click="confirmDelete(contact)"
-                                class="text-red-500 hover:text-red-700 text-xs font-medium"
-                            >
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div v-if="lastPage > 1" class="flex items-center justify-between mt-4 text-sm text-gray-500">
-            <span>{{ from }}–{{ to }} of {{ total }}</span>
-            <div class="flex items-center gap-1">
-                <button
-                    @click="goToPage(currentPage - 1)"
-                    :disabled="currentPage === 1"
-                    class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                    ‹ Prev
-                </button>
-                <span class="px-3 py-1.5">{{ currentPage }} / {{ lastPage }}</span>
-                <button
-                    @click="goToPage(currentPage + 1)"
-                    :disabled="currentPage === lastPage"
-                    class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                    Next ›
-                </button>
-            </div>
-        </div>
+            <template #row="{ item: contact }">
+                <td class="px-5 py-3 font-medium text-gray-800">
+                    {{ contact.first_name }} {{ contact.last_name }}
+                </td>
+                <td class="px-5 py-3 text-gray-600">{{ contact.email }}</td>
+                <td class="px-5 py-3 text-right space-x-2">
+                    <button
+                        @click="openModal(contact)"
+                        class="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                    >
+                        Edit
+                    </button>
+                    <button
+                        @click="confirmDelete(contact)"
+                        class="text-red-500 hover:text-red-700 text-xs font-medium"
+                    >
+                        Delete
+                    </button>
+                </td>
+            </template>
+        </PaginatedTable>
 
         <ContactModal
             v-if="showModal"
@@ -90,9 +66,10 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { onMounted, ref, watch } from "vue";
 import axios from "axios";
 import ContactModal from "../components/ContactModal.vue";
+import PaginatedTable from "../components/PaginatedTable.vue";
 
 const contacts = ref([]);
 const loading = ref(false);
@@ -112,7 +89,10 @@ async function loadContacts() {
     loading.value = true;
     try {
         const { data } = await axios.get("/api/contacts", {
-            params: { search: search.value || undefined, page: currentPage.value },
+            params: {
+                search: search.value || undefined,
+                page: currentPage.value,
+            },
         });
         contacts.value = data.data;
         currentPage.value = data.current_page;

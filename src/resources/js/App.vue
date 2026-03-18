@@ -8,7 +8,7 @@
                 <button
                     v-for="item in navItems"
                     :key="item.view"
-                    @click="currentView = item.view"
+                    @click="setCurrentView(item.view)"
                     :class="[
                         'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
                         currentView === item.view
@@ -22,7 +22,10 @@
         </aside>
 
         <main class="flex-1 overflow-auto p-8">
-            <Dashboard v-if="currentView === 'dashboard'" />
+            <Dashboard
+                v-if="currentView === 'dashboard'"
+                @navigate="setCurrentView"
+            />
             <Contacts v-else-if="currentView === 'contacts'" />
             <Import v-else-if="currentView === 'import'" />
         </main>
@@ -30,16 +33,49 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import Dashboard from "./views/Dashboard.vue";
 import Contacts from "./views/Contacts.vue";
 import Import from "./views/Import.vue";
-
-const currentView = ref("contacts");
 
 const navItems = [
     { label: "Dashboard", view: "dashboard" },
     { label: "Contacts", view: "contacts" },
     { label: "Import", view: "import" },
 ];
+
+const defaultView = "contacts";
+const validViews = new Set(navItems.map((item) => item.view));
+const currentView = ref(resolveViewFromHash());
+
+function resolveViewFromHash() {
+    const view = window.location.hash.replace(/^#/, "");
+
+    return validViews.has(view) ? view : defaultView;
+}
+
+function syncViewFromHash() {
+    currentView.value = resolveViewFromHash();
+}
+
+function setCurrentView(view) {
+    if (!validViews.has(view)) {
+        return;
+    }
+
+    currentView.value = view;
+    window.location.hash = view;
+}
+
+onMounted(() => {
+    if (!window.location.hash) {
+        window.location.hash = currentView.value;
+    }
+
+    window.addEventListener("hashchange", syncViewFromHash);
+});
+
+onUnmounted(() => {
+    window.removeEventListener("hashchange", syncViewFromHash);
+});
 </script>

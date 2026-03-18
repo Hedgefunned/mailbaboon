@@ -38,14 +38,13 @@ class ImportService implements ImportServiceInterface
         // We get the final import results, including counts of new records, duplicates, and invalid records.
         $importResult = $this->prepareImportResult();
 
-
         $memoryPeakMb = round(memory_get_peak_usage(true) / 1024 / 1024, 2);
 
         $performanceMetrics = [
             'parse_time_ms' => $parseResult['execution_time_ms'],
             'execution_time_ms' => round((hrtime(true) - $startTime) / 1e6, 2),
             'memory_peak_mb' => $memoryPeakMb,
-        ]; 
+        ];
 
         $result = array_merge($loadResult, $inputDedupeResult, $dbDedupeResult, $insertResult, $importResult, $performanceMetrics);
 
@@ -53,7 +52,6 @@ class ImportService implements ImportServiceInterface
 
         return $result;
     }
-
 
     private function parseXmlToCsv(UploadedFile $file): array
     {
@@ -114,7 +112,6 @@ class ImportService implements ImportServiceInterface
             'execution_time_ms' => $executionTimeMs,
         ];
     }
-
 
     private function loadCsvIntoDb(string $storagePath): array
     {
@@ -206,7 +203,7 @@ class ImportService implements ImportServiceInterface
 
     private function isValidEmail(string $email): bool
     {
-        // Sadly, we are skipping our custom validation here because it's really expensive. 
+        // Sadly, we are skipping our custom validation here because it's really expensive.
         // The built-in filter_var is not perfect but it's very fast and should be good enough for this use case.
         // Using the custom EmailAddress rule costs ~5s on an otherwise ~500ms parse which is almost 200% increase in total execution time.
         return filter_var($email, FILTER_VALIDATE_EMAIL);

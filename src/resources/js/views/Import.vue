@@ -4,191 +4,69 @@
             Import Contacts
         </h2>
 
-        <div class="bg-white rounded-xl shadow-sm p-6 max-w-lg">
-            <div class="flex items-start justify-between gap-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                    >XML file</label
-                >
-                <button
-                    @click="truncateContacts"
-                    :disabled="debugLoading || loading"
-                    class="text-xs text-red-600 hover:text-red-700 underline underline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                    type="button"
-                >
-                    {{
-                        debugLoading
-                            ? "Truncating..."
-                            : "Debug: truncate contacts table"
-                    }}
-                </button>
-            </div>
-            <input
-                type="file"
-                accept=".xml"
-                @change="onFileChange"
-                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <ImportInputCard
+                :debug-loading="debugLoading"
+                :debug-message="debugMessage"
+                :error="error"
+                :file="file"
+                :loading="loading"
+                @file-change="onFileChange"
+                @truncate-contacts="truncateContacts"
+                @upload="upload"
             />
 
-            <button
-                @click="upload"
-                :disabled="!file || loading"
-                class="mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-                {{ loading ? "Importing…" : "Import" }}
-            </button>
+            <ImportSummaryCard v-if="result" :result="result" />
 
-            <div
-                v-if="result"
-                class="mt-5 p-4 rounded-lg bg-gray-50 text-sm space-y-1"
-            >
-                <p class="text-gray-700 font-medium">
-                    Total records in file: {{ result.total_records }}
-                </p>
-                <p class="text-green-700 font-medium">
-                    New records: {{ result.new_records }}
-                </p>
-                <p class="text-amber-700">
-                    Duplicates in file: {{ result.duplicates_in_file }}
-                </p>
-                <p class="text-orange-700">
-                    Duplicates in DB: {{ result.duplicates_in_db }}
-                </p>
-                <p class="text-red-700">
-                    Invalid records: {{ result.invalid_records }}
-                </p>
-                <hr class="my-2 border-gray-200" />
-                <p class="text-gray-400">
-                    Parse: {{ result.parse_time_ms }} ms
-                </p>
-                <p class="text-gray-400">Load: {{ result.load_time_ms }} ms</p>
-                <p class="text-gray-400">
-                    Input Dedupe: {{ result.dedupe_time_ms }} ms
-                </p>
-                <p class="text-gray-400">
-                    DB Dedupe: {{ result.existing_contacts_dedupe_time_ms }} ms
-                </p>
-                <p class="text-gray-400">
-                    DB Insert: {{ result.insert_valid_contacts_time_ms }} ms
-                </p>
-                <p class="text-gray-400">
-                    Time: {{ result.execution_time_ms }} ms
-                </p>
-                <p class="text-gray-400">
-                    Memory: {{ result.memory_peak_mb }} MB (peak)
-                </p>
-            </div>
-
-            <div
-                v-if="debugMessage"
-                class="mt-5 p-4 rounded-lg bg-amber-50 text-sm text-amber-800"
-            >
-                {{ debugMessage }}
-            </div>
-
-            <div
-                v-if="error"
-                class="mt-5 p-4 rounded-lg bg-red-50 text-sm text-red-700"
-            >
-                {{ error }}
-            </div>
+            <ImportPerformanceCard v-if="result" :result="result" />
         </div>
 
         <div class="mt-8">
-            <div class="flex items-center justify-between mb-4 gap-3">
-                <h3 class="text-xl font-semibold text-gray-800">
-                    Rejected Records
-                </h3>
-                <input
-                    v-model="rejectedSearch"
-                    type="search"
-                    placeholder="Search rejected records..."
-                    class="w-full max-w-sm px-4 py-2 text-sm border border-gray-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                />
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div
-                    v-if="rejectedLoading"
-                    class="p-8 text-center text-gray-400"
-                >
-                    Loading rejected records...
-                </div>
-
-                <div
-                    v-else-if="rejectedRecords.length === 0"
-                    class="p-8 text-center text-gray-400"
-                >
-                    No rejected records found.
-                </div>
-
-                <table v-else class="w-full text-sm">
-                    <thead class="bg-gray-50 border-b border-gray-100">
-                        <tr>
-                            <th
-                                class="text-left px-5 py-3 font-medium text-gray-500"
-                            >
-                                Name
-                            </th>
-                            <th
-                                class="text-left px-5 py-3 font-medium text-gray-500"
-                            >
-                                Email
-                            </th>
-                            <th
-                                class="text-left px-5 py-3 font-medium text-gray-500"
-                            >
-                                Reason
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-50">
-                        <tr
-                            v-for="record in rejectedRecords"
-                            :key="record.id"
-                            class="hover:bg-gray-50"
-                        >
-                            <td class="px-5 py-3 font-medium text-gray-800">
-                                {{ record.first_name }} {{ record.last_name }}
-                            </td>
-                            <td class="px-5 py-3 text-gray-600">
-                                {{ record.email }}
-                            </td>
-                            <td class="px-5 py-3 text-red-600">
-                                {{ record.failure_reason }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div
-                v-if="rejectedLastPage > 1"
-                class="flex items-center justify-between mt-4 text-sm text-gray-500"
+            <PaginatedTable
+                :current-page="rejectedCurrentPage"
+                :empty-message="'No rejected records found.'"
+                :from="rejectedFrom"
+                :items="rejectedRecords"
+                :last-page="rejectedLastPage"
+                :loading="rejectedLoading"
+                :loading-message="'Loading rejected records...'"
+                :search="rejectedSearch"
+                :search-placeholder="'Search rejected records...'"
+                :to="rejectedTo"
+                :total="rejectedTotal"
+                @page-change="goToRejectedPage"
+                @update:search="rejectedSearch = $event"
             >
-                <span
-                    >{{ rejectedFrom }}-{{ rejectedTo }} of
-                    {{ rejectedTotal }}</span
-                >
-                <div class="flex items-center gap-1">
-                    <button
-                        @click="goToRejectedPage(rejectedCurrentPage - 1)"
-                        :disabled="rejectedCurrentPage === 1"
-                        class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                        Prev
-                    </button>
-                    <span class="px-3 py-1.5">
-                        {{ rejectedCurrentPage }} / {{ rejectedLastPage }}
-                    </span>
-                    <button
-                        @click="goToRejectedPage(rejectedCurrentPage + 1)"
-                        :disabled="rejectedCurrentPage === rejectedLastPage"
-                        class="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                        Next
-                    </button>
-                </div>
-            </div>
+                <template #title>
+                    <h3 class="text-xl font-semibold text-gray-800">
+                        Rejected Records
+                    </h3>
+                </template>
+
+                <template #header>
+                    <th class="text-left px-5 py-3 font-medium text-gray-500">
+                        Name
+                    </th>
+                    <th class="text-left px-5 py-3 font-medium text-gray-500">
+                        Email
+                    </th>
+                    <th class="text-left px-5 py-3 font-medium text-gray-500">
+                        Reason
+                    </th>
+                </template>
+
+                <template #row="{ item: record }">
+                    <td class="px-5 py-3 font-medium text-gray-800">
+                        {{ record.first_name }} {{ record.last_name }}
+                    </td>
+                    <td class="px-5 py-3 text-gray-600">
+                        {{ record.email }}
+                    </td>
+                    <td class="px-5 py-3 text-red-600">
+                        {{ record.failure_reason }}
+                    </td>
+                </template>
+            </PaginatedTable>
         </div>
     </div>
 </template>
@@ -196,6 +74,10 @@
 <script setup>
 import { onMounted, ref, watch } from "vue";
 import axios from "axios";
+import ImportInputCard from "../components/ImportInputCard.vue";
+import ImportPerformanceCard from "../components/ImportPerformanceCard.vue";
+import ImportSummaryCard from "../components/ImportSummaryCard.vue";
+import PaginatedTable from "../components/PaginatedTable.vue";
 
 const file = ref(null);
 const loading = ref(false);

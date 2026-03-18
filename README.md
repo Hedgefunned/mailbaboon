@@ -1,9 +1,20 @@
-# Laravel app template
+# MailBaboon - monkeys > apes
 
-Laravel 12
-PHP 8.4
-Vue.js
-Axios
+A simple mailing list app.
+
+## sample XML structure for imports
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<data>
+  <item>
+    <email>john.doe@example.com</email>
+    <first_name>John</first_name>
+    <last_name>Doe</last_name>
+  </item>
+  ...
+</data>
+```
 
 # Instructions
 
@@ -107,3 +118,7 @@ docker compose exec app php artisan db:seed
 # Run tests
 docker compose exec app php artisan test
 ```
+
+## Known issues
+
+- fulltext search is weird

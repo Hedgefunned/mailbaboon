@@ -32,5 +32,4 @@ class ImportController extends Controller
 
         return response()->json(['message' => 'Contacts table truncated.']);
     }
-
 }
