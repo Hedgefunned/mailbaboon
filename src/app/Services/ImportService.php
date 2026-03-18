@@ -27,7 +27,7 @@ class ImportService implements ImportServiceInterface
         private InsertValidContactsAction $insertValidContacts,
     ) {}
 
-    public function import(UploadedFile $file, ?callable $onProgress = null): array
+    public function import(UploadedFile $file, bool $overwriteExisting = false, ?callable $onProgress = null): array
     {
         $startTime = hrtime(true);
 
@@ -43,9 +43,9 @@ class ImportService implements ImportServiceInterface
         $dbDedupeResult = $this->deduplicateExistingContacts->handle();
         $onProgress && $onProgress('dedupe_db', 80, 'Checked against database');
 
-        $insertResult = $this->insertValidContacts->handle();
+        $insertResult = $this->insertValidContacts->handle($overwriteExisting);
         $onProgress && $onProgress('insert', 100, 'Contacts inserted');
-        $importResult = $this->prepareImportResult();
+        $importResult = $this->prepareImportResult($overwriteExisting);
 
         $performanceMetrics = [
             'parse_time_ms' => $parseResult['execution_time_ms'],
@@ -53,14 +53,24 @@ class ImportService implements ImportServiceInterface
             'memory_peak_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
         ];
 
-        $result = array_merge($loadResult, $inputDedupeResult, $dbDedupeResult, $insertResult, $importResult, $performanceMetrics);
+        $result = array_merge(
+            $loadResult,
+            $inputDedupeResult,
+            $dbDedupeResult,
+            $insertResult,
+            $importResult,
+            [
+                'overwrite_existing' => $overwriteExisting,
+            ],
+            $performanceMetrics,
+        );
 
         Log::info('Import (CSV) completed', $result);
 
         return $result;
     }
 
-    private function prepareImportResult(): array
+    private function prepareImportResult(bool $overwriteExisting = false): array
     {
         $newRecords = DB::table(self::STAGING_TABLE)->where('is_valid', 1)->count();
         $duplicatesInFile = DB::table(self::STAGING_TABLE)
@@ -78,6 +88,7 @@ class ImportService implements ImportServiceInterface
         return [
             'total_records' => $total,
             'new_records' => $newRecords,
+            'overwritten_records' => $overwriteExisting ? $duplicatesInFile + $duplicatesInDb : 'false',
             'duplicates_in_file' => $duplicatesInFile,
             'duplicates_in_db' => $duplicatesInDb,
             'invalid_records' => $invalidRecords,

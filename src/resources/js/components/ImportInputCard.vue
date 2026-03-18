@@ -82,6 +82,27 @@
                 @change="$emit('file-change', $event)"
             />
 
+            <label class="mt-4 flex items-start gap-2 text-sm text-gray-700">
+                <input
+                    type="checkbox"
+                    class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    :checked="overwriteExisting"
+                    @change="
+                        $emit(
+                            'update:overwrite-existing',
+                            $event.target.checked,
+                        )
+                    "
+                />
+                <span>
+                    <span class="font-medium">Overwrite existing contacts</span>
+                    <span class="block text-xs text-gray-500 mt-0.5">
+                        When enabled, contacts with matching email will be
+                        updated instead of skipped.
+                    </span>
+                </span>
+            </label>
+
             <div
                 v-if="debugMessage"
                 class="mt-4 p-3 rounded-lg bg-amber-50 text-sm text-amber-800"
@@ -141,7 +162,16 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    overwriteExisting: {
+        type: Boolean,
+        default: false,
+    },
 });
 
-defineEmits(["file-change", "truncate-contacts", "upload"]);
+defineEmits([
+    "file-change",
+    "truncate-contacts",
+    "upload",
+    "update:overwrite-existing",
+]);
 </script>

@@ -10,6 +10,10 @@
                 <span class="font-medium">New records:</span>
                 {{ result.new_records }}
             </p>
+            <p v-if="updatedRecords > 0" class="text-blue-700">
+                <span class="font-medium">Updated records:</span>
+                {{ updatedRecords }}
+            </p>
             <p class="text-amber-700">
                 <span class="font-medium">Duplicates (file):</span>
                 {{ result.duplicates_in_file }}
@@ -27,10 +31,21 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from "vue";
+
+const props = defineProps({
     result: {
         type: Object,
         required: true,
     },
+});
+
+const updatedRecords = computed(() => {
+    const value =
+        props.result.owerwritten_records ??
+        props.result.overwritten_records ??
+        0;
+
+    return Number(value) || 0;
 });
 </script>

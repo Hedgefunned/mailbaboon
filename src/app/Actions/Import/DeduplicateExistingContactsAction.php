@@ -16,7 +16,7 @@ class DeduplicateExistingContactsAction extends ImportAction
             JOIN contacts c ON ci.email = c.email
             SET
                 ci.is_valid = 0,
-                ci.failure_reason = CONCAT_WS(',', ci.failure_reason, 'DUPLICATE_IN_DB')
+                ci.failure_reason = 'DUPLICATE_IN_DB'
             WHERE ci.is_valid = 1
         ");
 

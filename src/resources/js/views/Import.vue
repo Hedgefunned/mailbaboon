@@ -11,11 +11,13 @@
                 :error="error"
                 :file="file"
                 :loading="loading"
+                :overwrite-existing="overwriteExisting"
                 :progress="progress"
                 :progress-steps="progressSteps"
                 :show-progress="showProgress"
                 @file-change="onFileChange"
                 @truncate-contacts="truncateContacts"
+                @update:overwrite-existing="overwriteExisting = $event"
                 @upload="upload"
             />
 
@@ -91,6 +93,7 @@ const debugMessage = ref(null);
 
 const showProgress = ref(false);
 const progress = ref(null);
+const overwriteExisting = ref(false);
 const STEPS = [
     { key: "parse", label: "XML parsed" },
     { key: "load", label: "Loaded into staging" },
@@ -126,6 +129,7 @@ async function upload() {
 
     const form = new FormData();
     form.append("file", file.value);
+    form.append("overwrite_existing", overwriteExisting.value ? "1" : "0");
 
     loading.value = true;
     result.value = null;

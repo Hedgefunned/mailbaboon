@@ -14,9 +14,10 @@ class ImportController extends Controller
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:xml'],
+            'overwrite_existing' => ['nullable', 'boolean'],
         ]);
 
-        $result = $service->import($request->file('file'));
+        $result = $service->import($request->file('file'), $request->boolean('overwrite_existing'));
 
         return response()->json($result);
     }
@@ -25,11 +26,13 @@ class ImportController extends Controller
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:xml'],
+            'overwrite_existing' => ['nullable', 'boolean'],
         ]);
 
         $file = $request->file('file');
+        $overwriteExisting = $request->boolean('overwrite_existing');
 
-        return response()->stream(function () use ($file, $service) {
+        return response()->stream(function () use ($file, $service, $overwriteExisting) {
             $emit = function (array $payload): void {
                 echo json_encode($payload)."\n";
                 if (ob_get_level() > 0) {
@@ -40,6 +43,7 @@ class ImportController extends Controller
 
             $result = $service->import(
                 $file,
+                $overwriteExisting,
                 function (string $step, int $percent, string $label) use ($emit): void {
                     $emit(['type' => 'progress', 'step' => $step, 'percent' => $percent, 'label' => $label]);
                 },

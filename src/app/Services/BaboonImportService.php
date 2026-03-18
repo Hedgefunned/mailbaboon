@@ -22,7 +22,7 @@ class BaboonImportService implements ImportServiceInterface
 
     private const STAGING_TABLE = 'contact_imports';
 
-    public function import(UploadedFile $file, ?callable $onProgress = null): array
+    public function import(UploadedFile $file, bool $overwriteExisting = false, ?callable $onProgress = null): array
     {
         $startTime = hrtime(true);
 

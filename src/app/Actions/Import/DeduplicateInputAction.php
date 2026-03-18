@@ -18,7 +18,7 @@ class DeduplicateInputAction extends ImportAction
                 AND original_row.id < duplicate_row.id
             SET
                 duplicate_row.is_valid = 0,
-                duplicate_row.failure_reason = CONCAT_WS(',', duplicate_row.failure_reason, 'DUPLICATE_IN_FILE')
+                duplicate_row.failure_reason = 'DUPLICATE_IN_FILE'
             WHERE duplicate_row.is_valid = 1;
         ");
 

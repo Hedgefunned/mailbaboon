@@ -115,4 +115,53 @@ class ImportServiceTest extends TestCase
 
         Log::assertLogged('info', fn ($message) => str_contains($message, 'Import'));
     }
+
+    public function test_overwrite_mode_reports_overwritten_records(): void
+    {
+        // Seed staging rows that simulate records marked as duplicates.
+        // In overwrite mode, current implementation reports these as overwritten.
+        \DB::table('contact_imports')->insert([
+            [
+                'first_name' => 'John',
+                'last_name' => 'Doe',
+                'email' => 'john@example.com',
+                'is_valid' => 0,
+                'failure_reason' => 'DUPLICATE_IN_FILE',
+            ],
+            [
+                'first_name' => 'Jane',
+                'last_name' => 'Doe',
+                'email' => 'jane@example.com',
+                'is_valid' => 0,
+                'failure_reason' => 'DUPLICATE_IN_DB',
+            ],
+        ]);
+
+        $this->mock(ParseXmlToCsvAction::class)
+            ->expects('handle')
+            ->andReturn(['csv_path' => 'imports/test.csv', 'execution_time_ms' => 1.0]);
+
+        $this->mock(LoadCsvIntoStagingAction::class)
+            ->expects('handle')
+            ->andReturn(['load_time_ms' => 1.0]);
+
+        $this->mock(DeduplicateInputAction::class)
+            ->expects('handle')
+            ->andReturn(['dedupe_time_ms' => 1.0]);
+
+        $this->mock(DeduplicateExistingContactsAction::class)
+            ->expects('handle')
+            ->andReturn(['existing_contacts_dedupe_time_ms' => 1.0]);
+
+        $this->mock(InsertValidContactsAction::class)
+            ->expects('handle')
+            ->with(true)
+            ->andReturn(['insert_valid_contacts_time_ms' => 1.0]);
+
+        $result = $this->app->make(ImportService::class)
+            ->import(UploadedFile::fake()->create('contacts.xml'), true);
+
+        $this->assertTrue($result['overwrite_existing']);
+        $this->assertSame(2, $result['overwritten_records']);
+    }
 }
