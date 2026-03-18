@@ -15,6 +15,6 @@ if [ ! -f ".env" ]; then
 fi
 
 # Fix storage permissions
-chmod -R 775 storage bootstrap/cache
+chmod -R 777 /var/www/storage /var/www/bootstrap/cache
 
 exec "$@"
