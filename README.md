@@ -117,8 +117,7 @@ docker compose exec app php artisan db:seed
 
 # Run tests
 docker compose exec app php artisan test
+
+#ngninx
+docker compose exec nginx nginx -s reload
 ```
-
-## Known issues
-
-- fulltext search is weird
