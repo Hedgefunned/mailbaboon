@@ -43,6 +43,26 @@ services:
             db:
                 condition: service_healthy
 
+    queue:
+        build: .
+        restart: unless-stopped
+        working_dir: /var/www
+        volumes:
+            - ./src:/var/www
+            - ./docker/php/php.ini:/usr/local/etc/php/conf.d/99-custom.ini
+        environment:
+            DB_CONNECTION: mariadb
+            DB_HOST: db
+            DB_PORT: 3306
+            DB_DATABASE: ${DB_DATABASE}
+            DB_USERNAME: ${DB_USERNAME}
+            DB_PASSWORD: ${DB_PASSWORD}
+            LOG_CHANNEL: stderr
+        command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=1"]
+        depends_on:
+            db:
+                condition: service_healthy
+
     db:
         image: mariadb:11
         restart: unless-stopped

@@ -18,6 +18,31 @@
             </button>
         </div>
 
+        <!-- Mode toggle -->
+        <div v-if="!loading" class="flex gap-4 mb-4">
+            <label
+                v-for="opt in modeOptions"
+                :key="opt.value"
+                class="flex items-start gap-2 text-sm cursor-pointer"
+            >
+                <input
+                    type="radio"
+                    :value="opt.value"
+                    :checked="mode === opt.value"
+                    class="mt-0.5 text-blue-600 focus:ring-blue-500"
+                    @change="$emit('update:mode', opt.value)"
+                />
+                <span>
+                    <span class="font-medium text-gray-700">{{
+                        opt.label
+                    }}</span>
+                    <span class="block text-xs text-gray-500 mt-0.5">{{
+                        opt.description
+                    }}</span>
+                </span>
+            </label>
+        </div>
+
         <!-- Progress UI (shown while importing and after completion) -->
         <div v-if="showProgress && progress !== null" class="mb-4">
             <div>
@@ -129,6 +154,19 @@
 </template>
 
 <script setup>
+const modeOptions = [
+    {
+        value: "streaming",
+        label: "Streaming",
+        description: "Fast, synchronous. Requires DB server config.",
+    },
+    {
+        value: "chunked",
+        label: "Chunked (async)",
+        description: "Batched background jobs. No DB reconfiguration needed.",
+    },
+];
+
 defineProps({
     debugLoading: {
         type: Boolean,
@@ -149,6 +187,10 @@ defineProps({
     loading: {
         type: Boolean,
         default: false,
+    },
+    mode: {
+        type: String,
+        default: "streaming",
     },
     progress: {
         type: Number,
@@ -172,6 +214,7 @@ defineEmits([
     "file-change",
     "truncate-contacts",
     "upload",
+    "update:mode",
     "update:overwrite-existing",
 ]);
 </script>

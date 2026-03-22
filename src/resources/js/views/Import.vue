@@ -11,12 +11,14 @@
                 :error="error"
                 :file="file"
                 :loading="loading"
+                :mode="mode"
                 :overwrite-existing="overwriteExisting"
                 :progress="progress"
                 :progress-steps="progressSteps"
                 :show-progress="showProgress"
                 @file-change="onFileChange"
                 @truncate-contacts="truncateContacts"
+                @update:mode="mode = $event"
                 @update:overwrite-existing="overwriteExisting = $event"
                 @upload="upload"
             />
@@ -91,17 +93,28 @@ const error = ref(null);
 const debugLoading = ref(false);
 const debugMessage = ref(null);
 
+const mode = ref("streaming"); // 'streaming' | 'chunked'
 const showProgress = ref(false);
 const progress = ref(null);
 const overwriteExisting = ref(false);
-const STEPS = [
+
+const STREAMING_STEPS = [
     { key: "parse", label: "XML parsed" },
     { key: "load", label: "Loaded into staging" },
     { key: "dedupe_input", label: "Deduplicated within file" },
     { key: "dedupe_db", label: "Checked against database" },
     { key: "insert", label: "Contacts inserted" },
 ];
-const progressSteps = ref(STEPS.map((s) => ({ ...s, done: false })));
+const CHUNKED_STEPS = [
+    { key: "parse", label: "XML parsed & validated" },
+    { key: "dispatch", label: "Jobs dispatched" },
+    { key: "processing", label: "Processing chunks" },
+    { key: "done", label: "All chunks complete" },
+];
+
+const progressSteps = ref(STREAMING_STEPS.map((s) => ({ ...s, done: false })));
+
+let pollInterval = null;
 
 const rejectedRecords = ref([]);
 const rejectedLoading = ref(false);
@@ -121,12 +134,28 @@ function onFileChange(e) {
     debugMessage.value = null;
     showProgress.value = false;
     progress.value = null;
-    progressSteps.value = STEPS.map((s) => ({ ...s, done: false }));
+    progressSteps.value = (
+        mode.value === "chunked" ? CHUNKED_STEPS : STREAMING_STEPS
+    ).map((s) => ({ ...s, done: false }));
 }
+
+watch(mode, () => {
+    progressSteps.value = (
+        mode.value === "chunked" ? CHUNKED_STEPS : STREAMING_STEPS
+    ).map((s) => ({ ...s, done: false }));
+});
 
 async function upload() {
     if (!file.value) return;
 
+    if (mode.value === "chunked") {
+        await uploadChunked();
+    } else {
+        await uploadStreaming();
+    }
+}
+
+async function uploadStreaming() {
     const form = new FormData();
     form.append("file", file.value);
     form.append("overwrite_existing", overwriteExisting.value ? "1" : "0");
@@ -137,7 +166,7 @@ async function upload() {
     debugMessage.value = null;
     showProgress.value = true;
     progress.value = 0;
-    progressSteps.value = STEPS.map((s) => ({ ...s, done: false }));
+    progressSteps.value = STREAMING_STEPS.map((s) => ({ ...s, done: false }));
 
     try {
         const response = await fetch("/api/import/stream", {
@@ -161,7 +190,7 @@ async function upload() {
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split("\n");
-            buffer = lines.pop(); // keep the last incomplete line
+            buffer = lines.pop();
 
             for (const line of lines) {
                 const trimmed = line.trim();
@@ -188,6 +217,85 @@ async function upload() {
     } finally {
         loading.value = false;
     }
+}
+
+async function uploadChunked() {
+    const form = new FormData();
+    form.append("file", file.value);
+    form.append("overwrite_existing", overwriteExisting.value ? "1" : "0");
+
+    loading.value = true;
+    result.value = null;
+    error.value = null;
+    debugMessage.value = null;
+    showProgress.value = true;
+    progress.value = 0;
+    progressSteps.value = CHUNKED_STEPS.map((s) => ({ ...s, done: false }));
+
+    try {
+        const { data } = await axios.post("/api/import/chunked", form);
+        const batchId = data.batch_id;
+
+        // Parse phase and dispatch are done synchronously on the server.
+        progress.value = 5;
+        progressSteps.value = progressSteps.value.map((s) => ({
+            ...s,
+            done: s.key === "parse" || s.key === "dispatch",
+        }));
+
+        await startPolling(batchId);
+
+        rejectedCurrentPage.value = 1;
+        await loadRejectedRecords();
+    } catch (e) {
+        error.value =
+            e.response?.data?.message ?? e.message ?? "Import failed.";
+        loading.value = false;
+    }
+}
+
+function startPolling(batchId) {
+    return new Promise((resolve) => {
+        pollInterval = setInterval(async () => {
+            try {
+                const { data } = await axios.get(
+                    `/api/import/batch/${batchId}`,
+                );
+
+                progress.value = Math.max(5, data.progress);
+                progressSteps.value = progressSteps.value.map((s) => ({
+                    ...s,
+                    done:
+                        s.done ||
+                        (s.key === "processing" && data.progress > 5) ||
+                        (s.key === "done" && data.finished_at !== null),
+                }));
+
+                if (data.finished_at !== null) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                    progress.value = 100;
+                    progressSteps.value = progressSteps.value.map((s) => ({
+                        ...s,
+                        done: true,
+                    }));
+
+                    if (data.result) {
+                        result.value = data.result;
+                    }
+
+                    loading.value = false;
+                    resolve();
+                }
+            } catch {
+                clearInterval(pollInterval);
+                pollInterval = null;
+                error.value = "Failed to poll import status.";
+                loading.value = false;
+                resolve();
+            }
+        }, 1500);
+    });
 }
 
 async function truncateContacts() {
